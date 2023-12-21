@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Leaflet motion plugin</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://leaflet.github.io/Leaflet.draw/src/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.js"></script>
+    <script src="dist/leaflet.motion.min.js"></script>
+
+    <style>
+        html,
+        body,
+        #map {
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .leaflet-div-icon {
+            background: transparent!important;
+            border: none!important;
+            color: white;
+        }
+
+        .red {
+            color: red!important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="map"></div>
+    <script>
+        // Cria um mapa Leaflet
+        var map = L.map("map").setView([51, 1], 8);
+
+        // Adiciona um layer de mapa com imagens de satélite
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        }).addTo(map);
+
+        // Configurações para o controle de desenho no mapa
+        var options = {
+            draw: {
+                circle: false,
+                rectangle: false,
+                marker: false,
+                circlemarker: false
+            }
+        };
+
+        // Cria e adiciona o controle de desenho ao mapa
+        var drawControl = new L.Control.Draw(options);
+        map.addControl(drawControl);
+
+        // Evento disparado ao criar uma nova forma no mapa
+        map.on(L.Draw.Event.CREATED, function (e) {
+            var type = e.layerType,
+                layer = e.layer;
+
+            // Verifica o tipo da forma desenhada
+            if (type === "polyline") {
+                // Cria uma polilinha animada no mapa
+                var line = L.motion.polyline(layer.getLatLngs(), {
+                    color: "orange"
+                }, {
+                    auto: true,
+                    easing: L.Motion.Ease.swing
+                }).motionSpeed(100000).addTo(map);
+            }
+
+            if (type === "polygon") {
+                // Cria um polígono animado no mapa
+                L.motion.polygon(layer.getLatLngs(), {
+                    color: "red",
+                    fill: true,
+                    fillOpacity: 0.4
+                }, {
+                    auto: true
+                }, {
+                    // Remove o polígono após a animação e adiciona um ícone personalizado
+                    removeOnEnd: true,
+                    icon: L.divIcon({
+                        className: "red",
+                        html: "<i class='fa fa-superpowers fa-spin fa-2x' aria-hidden='true' motion-base='0'></i>",
+                        iconSize: L.point(24, 24),
+                        iconAnchor: L.point(5, 22)
+                    })
+                }).motionDuration(10000).addTo(map);
+            }
+        });
+
+        // Definição de coordenadas para rotas de animação
+        var trackRoute = JSON.parse('[{"lat":51.15815239612826,"lng":-2.2055053710937504},{"lat":51.18569785341817,"lng":-2.1615600585937504}, ...]');
+        var shipRoute = JSON.parse('[{"lat":50.921966522212145,"lng":0.9651490766555072},{"lat":50.926120475839824,"lng":1.0437014233320954}, ...]');
+        var carRoute = JSON.parse('[{"lat":51.129466960517135,"lng":2.6630860380828385},{"lat":51.07664802198799,"lng":2.738342452794314}, ...]');
+        var planeRoute1 = JSON.parse('[{"lat":50.48445898955202,"lng":4.251709654927255},{"lat":50,"lng":0}]');
+        var planeRoute2 = JSON.parse('[{"lat":50,"lng":0},{"lat":51.15815239612826,"lng":-2.2055053710937504}]');
+
+        // Criação de um grupo de sequência de animações
+        var seqGroup = L.motion.seq([
+            L.motion.polyline(trackRoute, {
+                color: "orangered"
+            }, {
+                easing: L.Motion.Ease.easeInOutQuad
+            }, {
+                removeOnEnd: true,
+                icon: L.divIcon({
+                    html: "<i class='fa fa-truck fa-2x fa-flip-horizontal' aria-hidden='true'></i>",
+                    iconSize: L.point(27.5, 24)
+                })
+            }).motionDuration(8000),
+            L.motion.polyline(shipRoute, {
+                color: "steelblue"
+            }, {
+                easing: L.Motion.Ease.easeInOutQuart
+            }, {
+                removeOnEnd: true,
+                showMarker: true,
+                icon: L.divIcon({
+                    html: "<i class='fa fa-ship fa-2x' aria-hidden='true'></i>",
+                    iconSize: L.point(27.5, 24)
+                })
+            }).motionDuration(9000),
+            L.motion.polyline(carRoute, {
+                colors: "SlateGrey"
+            }, {
+                easing: L.Motion.Ease.easeInOutElastic
+            }, {
+                removeOnEnd: true,
+                icon: L.divIcon({
+                    html: "<i class='fa fa-car fa-2x' aria-hidden='true'></i>",
+                    iconSize: L.point(27.5, 24)
+                })
+            }).motionDuration(7000),
+            L.motion.seq([
+                L.motion.polyline(planeRoute1, {
+                    color: "indigo"
+                }, null, {
+                    removeOnEnd: false,
+                    icon: L.divIcon({
+                        html: "<i class='fa fa-plane fa-2x' aria-hidden='true' motion-base='-43'></i>",
+                        iconSize: L.point(19, 24)
+                    })
+                }).motionDuration(5000),
+                L.motion.polyline(planeRoute2, {
+                    color: "khaki"
+                }, null).motionDuration(7000)
+            ])
+        ]).addTo(map);
+
+        // Ad
