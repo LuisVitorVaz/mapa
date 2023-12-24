@@ -1,4 +1,6 @@
-const { horaRef, dataRef } = require('./index.js');
+// import {dataValor} from './index.js'
+// console.log("aqui no arquivo");
+// console.log(dataValor);
 
 let myCustomColourUser = 'background-color: red;';
 const markerHtml = `
@@ -12,11 +14,11 @@ const markerHtml = `
 	transform: rotate(45deg);
 	border: 3px solid #FFFFFF;`;
 
-// Coordenadas do Ponto A - Táxi
-const coordTaxi = [-30.0326, -51.2300]; // Porto Alegre, Brasil
+  const coordTaxi = [-30.0326, -51.2300]; // Porto Alegre, Brasil
 
-// Coordenadas do Ponto B - Usuário
-const coordUser = [horaRef, dataRef]; // Coordenadas do servidor
+  // Coordenadas do Ponto B - Usuário
+  const coordUser = [-30.0277, -51.2287]; // Coordenadas fictícias do usuário
+  
 
 // Iniciar o mapa com coordenadas do ponto A
 const map = L.map('map').setView(coordTaxi, 13);

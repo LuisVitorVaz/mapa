@@ -2,5 +2,14 @@
   "dependencies": {
     "firebase": "^10.3.1"
   },
-    "type": "module"
+  "name": "trabalho",
+  "version": "1.0.0",
+  "description": "mapa para rastreamento de barcos no mar ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "luis vitor vaz",
+  "license": "ISC",
+  "type": "module"
 }
