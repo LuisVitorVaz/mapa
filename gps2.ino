@@ -1,18 +1,18 @@
 #define TINY_GSM_MODEM_SIM800
-
 #include <TinyGsmClient.h>
 #include <ArduinoHttpClient.h>
-#include <TinyGPS++.h>
+#include <TinyGPS.h>
 #include <SoftwareSerial.h>
+#include <ArduinoJson.h>
 
-static const int RXPin = 4, TXPin = 3;
-TinyGPSPlus gps;
-SoftwareSerial ss(RXPin, TXPin);
+SoftwareSerial serial1(4, 3); // RX, TX
+TinyGPS gps;
 
 #define rxPin 8
 #define txPin 9
 SoftwareSerial sim800(txPin, rxPin);
 
+String dado1,dado2;
 const char FIREBASE_HOST[] = "bancodedados-a7591-default-rtdb.firebaseio.com";
 const String FIREBASE_AUTH = "09fFbaRrhJkNPoDVwRE3TszPG2m7TeUZKWuoAJUF";
 const String FIREBASE_PATH = "dados";
@@ -27,15 +27,14 @@ TinyGsmClientSecure gsm_client_secure_modem(modem, 0);
 HttpClient http_client = HttpClient(gsm_client_secure_modem, FIREBASE_HOST, SSL_PORT);
 
 unsigned long previousMillis = 0;
-const long interval = 60000;  // Intervalo de 60 segundos (em milissegundos)
+const long interval = 10000;  // Intervalo de 60 segundos (em milissegundos)
 
-void setup()
-{
-  Serial.begin(9600);
-  ss.begin(9600);
-  Serial.println(F("Inicializando..."));
-
+void setup() {
+  serial1.begin(9600);
   sim800.begin(9600);
+  Serial.begin(9600);
+  Serial.println(F("Inicializando..."));
+ 
   Serial.println(F("Inicializando módulo SIM800L..."));
 
   Serial.println(F("Inicializando modem..."));
@@ -47,16 +46,45 @@ void setup()
   http_client.setHttpResponseTimeout(10 * 1000); // 10 segundos de timeout para resposta HTTP
 }
 
-void loop()
-{
+void loop() {
+   // Configura para ouvir a porta do módulo GPS
+  serial1.listen();
+  bool gpsDataReceived = false;
+ 
+  while (serial1.available()) {
+    char cIn = serial1.read(); // guarda em cIn o dado recebido no pino RX
+    gpsDataReceived = gps.encode(cIn);
+  }
+  Serial.println("----------------------------------------");
+
+  long latitude, longitude;
+  unsigned long idadeInfo;
+  gps.get_position(&latitude, &longitude, &idadeInfo);
+
+  if (latitude != TinyGPS::GPS_INVALID_F_ANGLE) {
+    Serial.print("Latitude: ");
+    Serial.println(float(latitude) / 100000, 6);
+  }
+
+  if (longitude != TinyGPS::GPS_INVALID_F_ANGLE) {
+    Serial.print("Longitude: ");
+    Serial.println(float(longitude) / 100000, 6);
+  }
+  dado1 = String(latitude);
+  dado2 = String(longitude);
+ 
+  delay(250);
+
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= interval)
-  {
+  if (currentMillis - previousMillis >= interval) {
+    // Muda para ouvir a porta do módulo GSM
+    sim800.listen();
+
     Serial.print(F("Conectando a "));
     Serial.print(apn);
-    if (!modem.gprsConnect(apn, user, pass))
-    {
+    
+    if (!modem.gprsConnect(apn, user, pass)) {
       Serial.println(F(" falha"));
       delay(1000); // Adiciona atraso antes de tentar novamente
       return;
@@ -65,10 +93,8 @@ void loop()
 
     http_client.connect(FIREBASE_HOST, SSL_PORT);
 
-    while (true)
-    {
-      if (!http_client.connected())
-      {
+    while (true) {
+      if (!http_client.connected()) {
         Serial.println();
         http_client.stop();
         Serial.println(F("HTTP não conectado"));
@@ -76,22 +102,24 @@ void loop()
       }
       else
       {
-        gps_loop();
+          gps_loop();
       }
+   
     }
+
+    // Volta para ouvir a porta do módulo GPS
+    serial1.listen();
 
     previousMillis = currentMillis;
   }
 }
 
-void PostToFirebase(const char *method, const String &path, const String &data, HttpClient *http)
-{
+void PostToFirebase(const char *method, const String &path, const String &data, HttpClient *http) {
   String response;
   int statusCode = 0;
   http->connectionKeepAlive();
   String url;
-  if (path[0] != '/')
-  {
+  if (path[0] != '/') {
     url = "/";
   }
   url += path + ".json";
@@ -111,25 +139,23 @@ void PostToFirebase(const char *method, const String &path, const String &data, 
   Serial.print(F("Resposta: "));
   Serial.println(response);
 
-  if (!http->connected())
-  {
+  if (!http->connected()) {
     Serial.println();
     http->stop();
     Serial.println(F("HTTP POST desconectado"));
   }
 }
-
 void gps_loop()
 {
-  String  latitude = String(gps.location.lat());
-  String  longitude = String(gps.location.lng());
-  Serial.println(latitude);
-  Serial.println(longitude);
+   Serial.println(dado1);//lat
+   Serial.println(dado2);//long
+    
   String Data = "{";
-  Data += "\"Latitude\":" + latitude + ",";
-  Data += "\"Longitude\":" + longitude + "";
+  Data += "\"dado1\":" + dado1 + ",";
+  Data += "\"dado2\":" + dado2 + "";
   Data += "}";
 
-  PostToFirebase("PATCH", FIREBASE_PATH, Data, &http_client);
-  delay(60000);
+  PostToFirebase("PATCH", FIREBASE_PATH,Data, &http_client);
+  delay(60000); // Aguarda 1 minuto antes de obter novos dados do GPS
 }
+
