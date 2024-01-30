@@ -13,6 +13,7 @@ TinyGPS gps;
 SoftwareSerial sim800(txPin, rxPin);
 
 String dado1,dado2;
+unsigned long delayDuration = 120000; 
 const char FIREBASE_HOST[] = "bancodedados-a7591-default-rtdb.firebaseio.com";
 const String FIREBASE_AUTH = "09fFbaRrhJkNPoDVwRE3TszPG2m7TeUZKWuoAJUF";
 const String FIREBASE_PATH = "dados";
@@ -27,7 +28,7 @@ TinyGsmClientSecure gsm_client_secure_modem(modem, 0);
 HttpClient http_client = HttpClient(gsm_client_secure_modem, FIREBASE_HOST, SSL_PORT);
 
 unsigned long previousMillis = 0;
-const long interval = 10000;  // Intervalo de 60 segundos (em milissegundos)
+const long interval = 120000;  // Intervalo de 2 min em segundos (em milissegundos)
 
 void setup() {
   serial1.begin(9600);
@@ -57,22 +58,29 @@ void loop() {
   }
   Serial.println("----------------------------------------");
 
-  long latitude, longitude;
-  unsigned long idadeInfo;
-  gps.get_position(&latitude, &longitude, &idadeInfo);
+long latitude;
+long longitude;
+unsigned long idadeInfo;
 
-  if (latitude != TinyGPS::GPS_INVALID_F_ANGLE) {
-    Serial.print("Latitude: ");
-    Serial.println(float(latitude) / 100000, 6);
-  }
+gps.get_position(&latitude, &longitude, &idadeInfo);
 
-  if (longitude != TinyGPS::GPS_INVALID_F_ANGLE) {
-    Serial.print("Longitude: ");
-    Serial.println(float(longitude) / 100000, 6);
-  }
-  dado1 = String(latitude);
-  dado2 = String(longitude);
- 
+if (latitude != TinyGPS::GPS_INVALID_F_ANGLE) {
+  Serial.print("Latitude: ");
+  Serial.println(float(latitude) / 100000, 6);
+}
+
+if (longitude != TinyGPS::GPS_INVALID_F_ANGLE) {
+  Serial.print("Longitude: ");
+  Serial.println(float(longitude) / 100000, 6);
+}
+
+dado1 = String(latitude);
+dado2 = String(longitude);
+
+
+Serial.println(dado1);
+Serial.println(dado2);
+
   delay(250);
 
   unsigned long currentMillis = millis();
@@ -103,11 +111,13 @@ void loop() {
       else
       {
           gps_loop();
+          break;
       }
    
     }
 
     // Volta para ouvir a porta do módulo GPS
+    Serial.println("esta aqui");//long
     serial1.listen();
 
     previousMillis = currentMillis;
@@ -157,5 +167,8 @@ void gps_loop()
 
   PostToFirebase("PATCH", FIREBASE_PATH,Data, &http_client);
   delay(60000); // Aguarda 1 minuto antes de obter novos dados do GPS
+  Serial.println("apos o gps loop");//long
+  serial1.listen();
+  delay(delayDuration);
 }
 
