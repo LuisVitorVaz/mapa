@@ -13,7 +13,9 @@ var coordenadas2, coordenadas3;
 var dadosList = document.getElementById("data-box");
 var database = firebase.database();
 var dadosRef = database.ref("dados"); // Substitua pelo ID correto do seu nó de dados
-var alertCircle; // Declare alertCircle como uma variável global
+var alertCircleRed; // Variável para o círculo vermelho
+export let circulosAdicionados = []; // Lista para armazenar os pontos adicionados
+let alertCircle; // Declare alertCircle como uma variável global
 
 var map; // Variável para armazenar o mapa
 
@@ -81,10 +83,31 @@ function iniciarMapa(lat, lon, teste1, teste2) {
     // Inicia o mapa com coordenadas do ponto A
     map = L.map('map').setView(coordTaxi, 13);
 
-    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png').addTo(map);
+    // L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png').addTo(map);
 
+     // Definir camadas base
+     var osmLayer = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', { attribution: 'OpenStreetMap' });
+     var osmHotLayer = L.tileLayer('http://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { attribution: 'OpenStreetMap.Hot' });
+ 
+    // Adicionar camadas base ao controle de camadas
+    var baseLayers = {
+        "OSM": osmLayer,
+        "OSM Hot": osmHotLayer
+        };
+    L.control.layers(baseLayers).addTo(map);
+
+    // var overlays = {
+    //     "Rota": routingControl
+    // };
+
+    // L.control.layers(null, overlays).addTo(map);
+     // Adicionar camada base padrão
+     osmLayer.addTo(map);
+
+    // Adicionar camada base padrão
+    osmLayer.addTo(map);
    // circulo da funcao de alerta 
-    alertCircle = L.circle([ -30.165924,-51.403555], {
+   alertCircleRed = L.circle([-30.165924, -51.403555], {
         color: 'red', // Cor do círculo
         fillColor: 'red', // Cor de preenchimento do círculo
         fillOpacity: 0.5, // Opacidade do preenchimento do círculo
@@ -142,15 +165,15 @@ function converterParaCoordenadas(latitude, longitude) {
     return { latitude: lat, longitude: long };
 }
 
-function adicionarCirculo(lat, lon) {
+export function adicionarCirculo(lat, lon) {
     // Cria um círculo com raio de 3 metros (alterado de 1 para 3 para melhor visualização)
-    const circle = L.circle([lat, lon], {
+    alertCircle = L.circle([lat, lon], {
         color: 'green', // Cor da linha do círculo
         fillColor: 'green', // Cor de preenchimento do círculo
         fillOpacity: 0.5, // Opacidade do preenchimento
         radius: 3 // Raio do círculo em metros
     }).addTo(map); // Adiciona o círculo ao mapa
-    
+    circulosAdicionados.push(alertCircle); // Adiciona o ponto à lista
     adicionarCoordenadaNaLinha(lat, lon);
 }
 
@@ -176,22 +199,24 @@ function processarNovoDado(novo1, novo2) {
     dadoAnterior2 = novo2;
 }
 
-function criarLinhaEntrePontos(lat1, lon1, lat2, lon2) {
+export function criarLinhaEntrePontos(lat1, lon1, lat2, lon2) {
     // Calcula a distância entre os pontos usando a função distanceTo() do Leaflet
     const distance = L.latLng(lat1, lon1).distanceTo([lat2, lon2]);
 }
 // Função para alternar a visibilidade do círculo
-function toggleCircle() {
+
+function toggleCircle(){
 
     var isVisible = true;
 
     setInterval(function() {
         if (isVisible) {
-            alertCircle.setStyle({ fillOpacity: 0 }); // Torna o círculo invisível
+            alertCircleRed.setStyle({ fillOpacity: 0 }); // Torna o círculo invisível
         } else {
-            alertCircle.setStyle({ fillOpacity: 0.5 }); // Torna o círculo visível
+           alertCircleRed.setStyle({ fillOpacity: 0.5 }); // Torna o círculo visível
         }
 
         isVisible = !isVisible; // Inverte o estado de visibilidade
     }, 500); // Alterna a cada 500 milissegundos (meio segundo)
 }
+
