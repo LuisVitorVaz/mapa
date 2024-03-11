@@ -13,8 +13,11 @@ var coordenadas2, coordenadas3;
 var dadosList = document.getElementById("data-box");
 var database = firebase.database();
 var dadosRef = database.ref("dados"); // Substitua pelo ID correto do seu nó de dados
-var alertCircleRed; // Variável para o círculo vermelho
+export var alertCircleRed; // Variável para o círculo vermelho
+export let circulosdealerta = []; // Lista para armazenar os pontos adicionados
 export let circulosAdicionados = []; // Lista para armazenar os pontos adicionados
+export let trajetoria = []; // lista contendo os a ligacao entre os pontos
+export let linhapontos = []; // guarda todos os pontos recebidos entre as linhas 
 let alertCircle; // Declare alertCircle como uma variável global
 
 var map; // Variável para armazenar o mapa
@@ -113,12 +116,13 @@ function iniciarMapa(lat, lon, teste1, teste2) {
         fillOpacity: 0.5, // Opacidade do preenchimento do círculo
         radius: 10 // Raio do círculo
     }).addTo(map);
+    circulosdealerta.push(alertCircleRed); // Adiciona o ponto à lista
   
 
     // Personaliza o ponto no mapa com imagem do táxi.
     const taxiIcon = L.icon({
         className: "taxi-pointers",
-        iconUrl: 'car-top-view.png',
+        iconUrl: 'imagens/car-top-view.png',
         iconSize: [45, 45]
     });
     var taxiMarker = L.marker(coordTaxi, { icon: taxiIcon }).addTo(map);
@@ -177,9 +181,10 @@ export function adicionarCirculo(lat, lon) {
     adicionarCoordenadaNaLinha(lat, lon);
 }
 
-function iniciarLinha(lat, lon) {
+export function iniciarLinha(lat, lon) {
     // Inicializa a linha poligonal com a primeira coordenada
     polyline = L.polyline([[lat, lon]], { color: 'blue' }).addTo(map);
+    trajetoria.push(polyline);
 }
 
 function adicionarCoordenadaNaLinha(lat, lon) {
@@ -202,21 +207,26 @@ function processarNovoDado(novo1, novo2) {
 export function criarLinhaEntrePontos(lat1, lon1, lat2, lon2) {
     // Calcula a distância entre os pontos usando a função distanceTo() do Leaflet
     const distance = L.latLng(lat1, lon1).distanceTo([lat2, lon2]);
+    linhapontos.push(distance);
 }
 // Função para alternar a visibilidade do círculo
 
-function toggleCircle(){
-
+export function toggleCircle(intervalo) {
+    if (intervalo == false) { // Se intervalo for true, mantém o círculo transparente e sai da função
+        alertCircleRed.setStyle({ fillOpacity: 0, color: 'transparent' });
+        return;
+    }
+ else{
     var isVisible = true;
 
     setInterval(function() {
         if (isVisible) {
             alertCircleRed.setStyle({ fillOpacity: 0 }); // Torna o círculo invisível
         } else {
-           alertCircleRed.setStyle({ fillOpacity: 0.5 }); // Torna o círculo visível
+            alertCircleRed.setStyle({ fillOpacity: 0.5 }); // Torna o círculo visível
         }
 
         isVisible = !isVisible; // Inverte o estado de visibilidade
     }, 500); // Alterna a cada 500 milissegundos (meio segundo)
 }
-
+}
