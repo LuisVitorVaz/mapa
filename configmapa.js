@@ -9,7 +9,6 @@ var polyline; // Variável para armazenar a linha poligonal
 var routingControl; // Variável para armazenar o controle de rota
 var waypoints = []; // Array para armazenar os pontos da rota
 var coordenadas_iniciais_lat, coordenadas_iniciais_lon;
-var coordenadas2, coordenadas3;
 var dadosList = document.getElementById("data-box");
 var database = firebase.database();
 var dadosRef = database.ref("dados"); // Substitua pelo ID correto do seu nó de dados
@@ -19,6 +18,7 @@ export let circulosAdicionados = []; // Lista para armazenar os pontos adicionad
 export let trajetoria = []; // lista contendo os a ligacao entre os pontos
 export let linhapontos = []; // guarda todos os pontos recebidos entre as linhas 
 let alertCircle; // Declare alertCircle como uma variável global
+export let barcoprimeiro // contem os dados do barco 1
 
 var map; // Variável para armazenar o mapa
 
@@ -122,9 +122,10 @@ function iniciarMapa(lat, lon, teste1, teste2) {
     // Personaliza o ponto no mapa com imagem do táxi.
     const taxiIcon = L.icon({
         className: "taxi-pointers",
-        iconUrl: 'imagens/car-top-view.png',
+        iconUrl: 'imagens/barcosemfundo.png',
         iconSize: [45, 45]
     });
+    barcoprimeiro=taxiIcon;
     var taxiMarker = L.marker(coordTaxi, { icon: taxiIcon }).addTo(map);
     taxiMarker.bindPopup('inicio');
     // Identifica a melhor rota para iniciar a viagem.
@@ -212,13 +213,8 @@ export function criarLinhaEntrePontos(lat1, lon1, lat2, lon2) {
 // Função para alternar a visibilidade do círculo
 
 export function toggleCircle(intervalo) {
-    if (intervalo == false) { // Se intervalo for true, mantém o círculo transparente e sai da função
-        alertCircleRed.setStyle({ fillOpacity: 0, color: 'transparent' });
-        return;
-    }
- else{
+       
     var isVisible = true;
-
     setInterval(function() {
         if (isVisible) {
             alertCircleRed.setStyle({ fillOpacity: 0 }); // Torna o círculo invisível
@@ -228,5 +224,5 @@ export function toggleCircle(intervalo) {
 
         isVisible = !isVisible; // Inverte o estado de visibilidade
     }, 500); // Alterna a cada 500 milissegundos (meio segundo)
-}
-}
+    }
+ 
