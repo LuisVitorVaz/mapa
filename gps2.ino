@@ -5,6 +5,7 @@
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 
+void enviarsms();
 SoftwareSerial serial1(4, 3); // RX, TX
 TinyGPS gps;
 
@@ -13,7 +14,9 @@ TinyGPS gps;
 SoftwareSerial sim800(txPin, rxPin);
 
 String dado1,dado2;
-unsigned long delayDuration = 120000; 
+bool interruptFlag = false; 
+bool dadosLidos = false; // Inicialmente, nenhum dado foi lido
+const int interruptPin = 2; // Define o pino para a interrupção externa
 const char FIREBASE_HOST[] = "bancodedados-a7591-default-rtdb.firebaseio.com";
 const String FIREBASE_AUTH = "09fFbaRrhJkNPoDVwRE3TszPG2m7TeUZKWuoAJUF";
 const String FIREBASE_PATH = "dados";
@@ -28,12 +31,16 @@ TinyGsmClientSecure gsm_client_secure_modem(modem, 0);
 HttpClient http_client = HttpClient(gsm_client_secure_modem, FIREBASE_HOST, SSL_PORT);
 
 unsigned long previousMillis = 0;
-const long interval = 120000;  // Intervalo de 2 min em segundos (em milissegundos)
+
 
 void setup() {
   serial1.begin(9600);
-  sim800.begin(9600);
   Serial.begin(9600);
+  sim800.begin(9600);
+  
+  pinMode(interruptPin, INPUT); // Define o pino como entrada
+  attachInterrupt(digitalPinToInterrupt(interruptPin), enviarsms, FALLING); // Configura a interrupção para ocorrer na borda de descida (FALLING)
+  
   Serial.println(F("Inicializando..."));
  
   Serial.println(F("Inicializando módulo SIM800L..."));
@@ -46,9 +53,32 @@ void setup() {
 
   http_client.setHttpResponseTimeout(10 * 1000); // 10 segundos de timeout para resposta HTTP
 }
+long startTime = 0;
+long interval = 60000;  // 1 minuto em milissegundos
 
 void loop() {
-   // Configura para ouvir a porta do módulo GPS
+    unsigned long currentTime = millis();
+
+    if (interruptFlag) {
+        interruptFlag = false; // Reseta a flag da interrupção
+        // Trata a interrupção (chama a função enviarsms())
+        enviarsms();
+    } 
+    else {
+        if (currentTime - startTime < interval) {
+            // Se o tempo ainda não passou, continue lendo o GPS
+            lergps();
+        } else {
+            // Se já se passou um minuto, passe para a próxima função
+            lergsm();
+            // Reinicia o tempo de contagem para a próxima iteração
+            startTime = currentTime;
+        }
+    }
+}
+  void lergps()
+  {
+     // Configura para ouvir a porta do módulo GPS
   serial1.listen();
   bool gpsDataReceived = false;
  
@@ -82,12 +112,11 @@ Serial.println(dado1);
 Serial.println(dado2);
 
   delay(250);
-
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - previousMillis >= interval) {
-    // Muda para ouvir a porta do módulo GSM
-    sim800.listen();
+}
+void lergsm()
+{
+  // Configura para ouvir a porta do módulo Gsm
+  sim800.listen();
 
     Serial.print(F("Conectando a "));
     Serial.print(apn);
@@ -115,15 +144,7 @@ Serial.println(dado2);
       }
    
     }
-
-    // Volta para ouvir a porta do módulo GPS
-    Serial.println("esta aqui");//long
-    serial1.listen();
-
-    previousMillis = currentMillis;
   }
-}
-
 void PostToFirebase(const char *method, const String &path, const String &data, HttpClient *http) {
   String response;
   int statusCode = 0;
@@ -157,9 +178,6 @@ void PostToFirebase(const char *method, const String &path, const String &data, 
 }
 void gps_loop()
 {
-   Serial.println(dado1);//lat
-   Serial.println(dado2);//long
-    
   String Data = "{";
   Data += "\"dado1\":" + dado1 + ",";
   Data += "\"dado2\":" + dado2 + "";
@@ -167,8 +185,23 @@ void gps_loop()
 
   PostToFirebase("PATCH", FIREBASE_PATH,Data, &http_client);
   delay(60000); // Aguarda 1 minuto antes de obter novos dados do GPS
-  Serial.println("apos o gps loop");//long
-  serial1.listen();
-  delay(delayDuration);
 }
-
+void enviarsms() {
+    sim800.listen(); 
+    String telefone =  "+980454531";
+    String mensagem = "Teste de mensagem";
+     sim800.print("AT+CMGF=1\n");
+    delay(100);
+     sim800.print("AT+CNMI=2,2,0,0,0\n");
+    delay(100);
+     sim800.print("ATX4\n");
+    delay(100);
+     sim800.print("AT+COLP=1\n");
+    delay(100);
+     sim800.print("AT+CMGS=\"" + telefone + "\"\n");
+    delay(100);
+     sim800.print(mensagem + "\n");
+    delay(100);
+     sim800.print((char)26); // CTRL+Z para finalizar a mensagem
+    delay(100);
+}
